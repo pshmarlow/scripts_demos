@@ -4,9 +4,17 @@ import glob
 import json
 from datetime import datetime
 
+def process_line(line):
+    # Split the line by tab, handling empty values correctly
+    return line.strip().split("\t")
+
+def epoch_to_datetime(epoch):
+    # Convert epoch to datetime in the specified format
+    return datetime.fromtimestamp(int(epoch) / 1000).strftime("%Y/%m/%d %H:%M:%S")
+
 def process_file(file_path):
-    data = []
     start_reading = False
+    rows = []
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
             if line.startswith("COPY "):
@@ -15,45 +23,52 @@ def process_file(file_path):
             if line.startswith("\\."):
                 break
             if start_reading:
-                parts = line.strip().split("\t")
-                # Handle empty values
-                parts = [part if part != '' else None for part in parts]
-                # Convert epoch to datetime for edit date columns
-                if 'tenant' in file_path:
-                    edit_date_index = 6
-                else: # domains file
-                    edit_date_index = 4
-                if parts[edit_date_index] is not None:
-                    parts[edit_date_index] = datetime.fromtimestamp(int(parts[edit_date_index])/1000).strftime("%Y-%m-%dT%H:%M:%S")
-                data.append(parts)
-    return data
+                parts = process_line(line)
+                # Convert epoch to datetime for Edit Date
+                if len(parts) > 6:  # For tenant files
+                    parts[6] = epoch_to_datetime(parts[6])
+                if len(parts) > 4:  # For domains files
+                    parts[4] = epoch_to_datetime(parts[4])
+                rows.append(parts)
+    return rows
+
+def merge_data(tenants, domains):
+    # Convert domains list to a dictionary for easy access
+    domains_dict = {row[5]: row for row in domains}
+    
+    merged_data = []
+    for tenant in tenants:
+        tenant_id = tenant[0]
+        domain_data = domains_dict.get(tenant_id, [""] * 6)  # Default to empty strings
+        merged_row = tenant + domain_data
+        merged_data.append(merged_row)
+    
+    # Add domains data that doesn't match any tenant
+    tenant_ids = set(t[0] for t in tenants)
+    for domain in domains:
+        if domain[5] not in tenant_ids:
+            merged_data.append([""] * 7 + domain)  # Prepend with empty tenant data
+
+    return merged_data
 
 def main():
     tenant_files = glob.glob('DB_Dumps/tenant*.sql')
     domain_files = glob.glob('DB_Dumps/domains*.sql')
-    tenant_data = []
-    domain_data = []
+    all_tenants = []
+    all_domains = []
 
-    # Process tenant and domain files
     for file_path in tenant_files:
-        tenant_data.extend(process_file(file_path))
+        all_tenants.extend(process_file(file_path))
+    
     for file_path in domain_files:
-        domain_data.extend(process_file(file_path))
+        all_domains.extend(process_file(file_path))
 
-    # Combine data based on tenant ID and domain tenant_id
-    combined_data = []
-    for tenant_row in tenant_data:
-        tenant_id = tenant_row[0]
-        for domain_row in domain_data:
-            if domain_row[-1] == tenant_id:  # Match found based on tenant ID
-                combined_row = tenant_row + domain_row[:-1]  # Exclude redundant tenant_id from domain data
-                combined_data.append(combined_row)
-                break
+    merged_rows = merge_data(all_tenants, all_domains)
 
-    # Convert combined data to the desired dictionary format
-    data_dicts = []
-    for row in combined_data:
-        data_dict = {
+    # Prepare data for JSON output
+    final_data = []
+    for row in merged_rows:
+        row_dict = {
             "ID": row[0],
             "Name": row[1],
             "Description": row[2],
@@ -65,20 +80,13 @@ def main():
             "domains_name": row[8],
             "domains_description": row[9],
             "domains_deleted": row[10],
-            "domain_editdate": row[11]
+            "domain_editdate": row[11],
+            "tenant_id": row[12],
         }
-        data_dicts.append(data_dict)
+        final_data.append(row_dict)
 
-    # Prepare headers
-    headers = [
-        {"key": "ID", "header": "Header ID"},
-        {"key": "Name", "header": "Header Name"},
-        # Add other headers as needed
-    ]
-
-    # Print combined data and headers
-    combined = {"data": data_dicts, "headers": headers}
-    print(json.dumps(combined, indent=4))
+    # Print the final data
+    print(json.dumps(final_data, indent=4))
 
 if __name__ == "__main__":
     main()
