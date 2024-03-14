@@ -82,7 +82,7 @@ cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}" {log_path} 2>/dev/null'
 def process_logs(events_oom, events_txsentry, seen_events):
     issues_runs = os.popen(cmd).read().strip().split('\n')
     last_event = None
-    for issue in issues_runs:
+    for run in issues_runs:
       
         # OOM pattern check and processing
         for pattern in oom_patterns:
