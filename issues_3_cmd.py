@@ -25,10 +25,10 @@ txsentry_patterns = [
         r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[hostcontext.hostcontext\] \[(?P<thread_key>[^/]+)\/Sequential.*TxSentry.*Found unmanaged process on host .*: (?P<service>\S+), pid=(?P<pid>\d+).*'
     ),
     re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[hostcontext.hostcontext\] \[(?P<thread_key>[^/]+)\/Sequential.*TxSentry:.*TX on host \d+\.\d+\.\d+\.\d+:  pid=(?P<pid>\d+).* query=\'(?P<query>.+)\''
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[hostcontext.hostcontext\] \[(?P<thread_key>[^/]+)\/Sequential.*TxSentry:.*TX on host .*: pid=(?P<pid>\d+).* query=\'(?P<query>.+)\''
     ),
     re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[hostcontext.hostcontext\] \[(?P<thread_key>[^/]+)\/Sequential.*TxSentry:.*Found a process on host \d+\.\d+\.\d+\.\d+: (?P<service>ecs-ep), pid=(?P<pid>\d+).*'
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[hostcontext.hostcontext\] \[(?P<thread_key>[^/]+)\/Sequential.*TxSentry:.*Found a process on host .*: (?P<service>\S+), pid=(?P<pid>\d+).*'
     )
 ]
 
@@ -107,12 +107,8 @@ def main():
     events_oom = []
     events_txsentry = []
     seen_events = set()
-    # Process current and archived log files
-    process_file('var/log/qradar.error', events_oom, events_txsentry, seen_events)
-    for zipped_file in glob('var/log/qradar.old/qradar.error*.gz'):
-        process_file(zipped_file, events_oom, events_txsentry, seen_events)
+    process_logs(events_oom, events_txsentry, seen_events)
     
-    # Sort and prepare events (OOM and TxSentry)
     for event_list, headers in [(events_oom, headers_oom), (events_txsentry, headers_txsentry)]:
         event_list.sort(key=lambda event: event['DateTime'])
         for idx, event in enumerate(event_list):
