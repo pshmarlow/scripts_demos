@@ -92,7 +92,7 @@ def process_reference_data_processor_event(match, events_reference_data_processo
     event_key = (datetime_obj, 'ReferenceDataProcessorThread')
     if event_key not in seen_events:
         seen_events.add(event_key)
-        events_reference_data.append({
+        events_reference_data_processor.append({
             'DateTime': datetime_obj
         })
 
@@ -118,7 +118,7 @@ expensive_rules_keywords = "Expensive Custom Rules Based On Average Throughput"
 log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
 cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}" {log_path} 2>/dev/null'
 
-def process_logs(events_oom, events_txsentry, events_reference_data_processor, seen_events):
+def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, seen_events):
     issues_runs = os.popen(cmd).read().strip().split('\n')
     last_event = None
     for run in issues_runs:
