@@ -50,6 +50,20 @@ too_many_open_patterns = [
     re.compile(
         r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\s(?P<service>\S+)\[\d+\]: ...Too many open...'
     )
+
+    re.compile(
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+.*?\s+(?P<service>\w+)[\[\(].*Too many open files'
+    ),
+    re.compile(
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+.*?\[(?P<service>[^\]]+)\].*Too many open files'
+    ),
+    re.compile(
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+.*?\[(?P<service>\w+)\.\w+\].*Too many open files'
+    )
+
+
+
+    
 ]
 
 # ^ first one may also need to try with:
