@@ -71,6 +71,16 @@ cache_overflow_patterns = [
     )
 ]
 
+# Keywords and command for zgrep
+oom_keywords = "OutOfMemoryMonitor"
+txsentry_keywords = "TxSentry"
+reference_data_processor_keywords = "ReferenceDataProcessorThread"
+expensive_rules_keywords = "Expensive Custom Rules Based On Average Throughput"
+too_many_open_files_keywords = "Too many open "
+cache_overflow_keywords = " is experiencing heavy "
+log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
+cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}" {log_path} 2>/dev/null'
+
 def process_cache_overflow_event(match, events_cache_overflow, seen_events):
     date_str = match.group('date')
     current_year = datetime.datetime.now().year
@@ -86,16 +96,6 @@ def process_cache_overflow_event(match, events_cache_overflow, seen_events):
             'service': service_name,
             'cache': cache_name,
         })
-
-# Keywords and command for zgrep
-oom_keywords = "OutOfMemoryMonitor"
-txsentry_keywords = "TxSentry"
-reference_data_processor_keywords = "ReferenceDataProcessorThread"
-expensive_rules_keywords = "Expensive Custom Rules Based On Average Throughput"
-too_many_open_files_keywords = "Too many open "
-cache_overflow_keywords = "ChainAppendCache: [WARN]"
-log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
-cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}" {log_path} 2>/dev/null'
 
 def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, seen_events):
     issues_runs = os.popen(cmd).read().strip().split('\n')
