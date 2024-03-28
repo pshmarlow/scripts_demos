@@ -64,22 +64,94 @@ too_many_open_patterns = [
 # Cache Overflow pattern
 cache_overflow_patterns = [
     re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*\[(?P<cache>\S+)\] is experiencing heavy COLLISIONS exceeding configured threshold.*'
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*(?P<cache>\S+) is experiencing heavy COLLISIONS exceeding configured threshold.*'
     ),
     re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*\[(?P<cache>\S+)\] is experiencing heavy disk reads exceeding configured threshold.*'
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*(?P<cache>\S+) is experiencing heavy disk reads exceeding configured threshold.*'
     )
 ]
 
-# Keywords and command for zgrep
-oom_keywords = "OutOfMemoryMonitor"
-txsentry_keywords = "TxSentry"
-reference_data_processor_keywords = "ReferenceDataProcessorThread"
-expensive_rules_keywords = "Expensive Custom Rules Based On Average Throughput"
-too_many_open_files_keywords = "Too many open "
-cache_overflow_keywords = " is experiencing heavy "
-log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
-cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}" {log_path} 2>/dev/null'
+def process_oom_event(match, events_oom, seen_events):
+    date_str = match.group('date')
+    current_year = datetime.datetime.now().year
+    date_str_with_year = f"{date_str} {current_year}"
+    datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
+    service_name = match.group('service')
+    event_key = (datetime_obj, service_name, 'OOM')
+    if event_key not in seen_events:
+        seen_events.add(event_key)
+        events_oom.append({
+            'DateTime': datetime_obj,
+            'service': service_name,
+        })
+
+def process_txsentry_event(match, events_txsentry, seen_events, last_event):
+    date_str = match.group('date')
+    current_year = datetime.datetime.now().year
+    date_str_with_year = f"{date_str} {current_year}"
+    datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
+    service_name = match.group('service') if 'service' in match.groupdict() else ""
+    query = match.group('query') if 'query' in match.groupdict() else ""
+    thread_key = match.group('thread_key') if 'thread_key' in match.groupdict() else ""
+    event_key = (datetime_obj, service_name, query, thread_key, 'TxSentry')
+
+    # Check if this event should be merged with the previous one
+    if last_event and last_event['thread_key'] == thread_key and not service_name:
+        # Merge this event's query with the last event's service
+        last_event['query'] = query
+        return None  # No new event to return since it was merged
+
+    new_event = {
+        'DateTime': datetime_obj,
+        'service': service_name,
+        'query': query,
+        'thread_key': thread_key,
+    }
+    if event_key not in seen_events:
+        seen_events.add(event_key)
+        events_txsentry.append(new_event)
+    
+    return new_event if service_name else None  # Return the new event only if it has a service
+
+def process_reference_data_processor_event(match, events_reference_data_processor, seen_events):
+    date_str = match.group('date')
+    current_year = datetime.datetime.now().year
+    date_str_with_year = f"{date_str} {current_year}"
+    datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
+    event_key = (datetime_obj, 'ReferenceDataProcessorThread')
+    if event_key not in seen_events:
+        seen_events.add(event_key)
+        events_reference_data_processor.append({
+            'DateTime': datetime_obj
+        })
+
+def process_expensive_rules_event(match, events_expensive_rules, seen_events):
+    date_str = match.group('date')
+    current_year = datetime.datetime.now().year
+    date_str_with_year = f"{date_str} {current_year}"
+    datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
+    rules_details = match.group('rules')
+    event_key = (datetime_obj, 'ExpensiveRules', rules_details)
+    if event_key not in seen_events:
+        seen_events.add(event_key)
+        events_expensive_rules.append({
+            'DateTime': datetime_obj,
+            'rules': rules_details,
+        })
+
+def process_too_many_open_event(match, events_too_many_open, seen_events):
+    date_str = match.group('date')
+    current_year = datetime.datetime.now().year
+    date_str_with_year = f"{date_str} {current_year}"
+    datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
+    service_name = match.group('service')
+    event_key = (datetime_obj, service_name, 'TooManyOpenFiles')
+    if event_key not in seen_events:
+        seen_events.add(event_key)
+        events_too_many_open.append({
+            'DateTime': datetime_obj,
+            'service': service_name,
+        })
 
 def process_cache_overflow_event(match, events_cache_overflow, seen_events):
     date_str = match.group('date')
@@ -96,6 +168,16 @@ def process_cache_overflow_event(match, events_cache_overflow, seen_events):
             'service': service_name,
             'cache': cache_name,
         })
+
+# Keywords and command for zgrep
+oom_keywords = "OutOfMemoryMonitor"
+txsentry_keywords = "TxSentry"
+reference_data_processor_keywords = "ReferenceDataProcessorThread"
+expensive_rules_keywords = "Expensive Custom Rules Based On Average Throughput"
+too_many_open_files_keywords = "Too many open "
+cache_overflow_keywords = " is experiencing heavy "
+log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
+cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}" {log_path} 2>/dev/null'
 
 def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, seen_events):
     issues_runs = os.popen(cmd).read().strip().split('\n')
