@@ -123,6 +123,7 @@ def process_reference_data_processor_event(match, events_reference_data_processo
         seen_events.add(event_key)
         events_reference_data_processor.append({
             'DateTime': datetime_obj
+            'message': 'We have crossed...'
         })
 
 def process_expensive_rules_event(match, events_expensive_rules, seen_events):
@@ -231,6 +232,7 @@ def process_logs(events_oom, events_txsentry, events_reference_data_processor, e
 headers_oom = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
 headers_txsentry = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
 headers_reference_data_processor = [{"key": "time_date", "header": "Time/Date"}]
+headers_reference_data_processor = [{"key": "time_date", "header": "Time/Date"}, {"key": "message", "header": "Message"}]
 headers_expensive_rules = [{"key": "time_date", "header": "Time/Date"}, {"key": "rules", "header": "Rules Details"}]
 headers_too_many_open = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
 headers_cache_overflow = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}, {"key": "cache", "header": "Cache Name"}]
