@@ -1,8 +1,11 @@
 import json
 
-# File paths
-conf_file_path = '/first/location/conf'
-file_two_path = '/second/location/file_two'
+# File paths and their identifiers
+file_paths = {
+    '/first/location/conf': 'conf',
+    '/second/location/file_two': 'file_two',
+    '/third/location/conf_three': 'conf_three'
+}
 
 # Description mapping
 key_to_description = {
@@ -12,50 +15,57 @@ key_to_description = {
     'StringOne': 'Description Four',
     'StringTwo': 'Description Five',
     'StringThree': 'Description Six',
+    # Add mappings for unique keys from conf_three if necessary
 }
 
 # Initialize a dictionary to hold the data
-data = {'ID': [], 'key': [], 'key_two': [], 'value': [], 'description': []}
+data = {'ID': [], 'source': [], 'key': [], 'value': [], 'description': []}
 
 # Initialize ID counter
 id_counter = 0
 
-# Function to parse key-value pairs from the conf file
-def parse_conf_file(path):
+# Function to parse key-value pairs from the conf files
+def parse_conf_file(path, identifier, is_third_file=False):
     global id_counter
     with open(path, 'r') as file:
         for line in file:
             if '=' in line:
                 key, value = line.strip().split('=', 1)
-                data['ID'].append(str(id_counter))
-                data['key'].append(key)
-                data['key_two'].append('')  # Empty value for 'key_two' column
-                data['value'].append(value)
-                if key in key_to_description:
-                    data['description'].append(key_to_description[key])
+                # For the third file, check if the key-value pair is unique
+                if is_third_file:
+                    if (key, value) not in conf_contents:
+                        add_to_data(key, value, identifier)
                 else:
-                    data['description'].append('')
-                id_counter += 1
+                    conf_contents.add((key, value))  # Store key-value pairs from the first file
+                    add_to_data(key, value, identifier)
 
 # Function to parse key-value pairs from the second file
-def parse_file_two(path):
+def parse_file_two(path, identifier):
     global id_counter
     with open(path, 'r') as file:
         for line in file:
             parts = line.strip().split(' ', 1)
-            key_two = parts[0]
+            key = parts[0]
             value = parts[1] if len(parts) > 1 else ''
-            if key_two in key_to_description:
-                data['ID'].append(str(id_counter))
-                data['key'].append('')  # Empty value for 'key' column
-                data['key_two'].append(key_two)
-                data['value'].append(value)
-                data['description'].append(key_to_description[key_two])
-                id_counter += 1
+            add_to_data(key, value, identifier)
+
+# Helper function to add data to the structure
+def add_to_data(key, value, source):
+    global id_counter
+    data['ID'].append(str(id_counter))
+    data['source'].append(source)
+    data['key'].append(key)
+    data['value'].append(value)
+    data['description'].append(key_to_description.get(key, ''))
+    id_counter += 1
+
+# Store the contents of the first conf file to identify unique lines in the third conf file
+conf_contents = set()
 
 # Parse the files
-parse_conf_file(conf_file_path)
-parse_file_two(file_two_path)
+parse_conf_file('/first/location/conf', file_paths['/first/location/conf'])
+parse_file_two('/second/location/file_two', file_paths['/second/location/file_two'])
+parse_conf_file('/third/location/conf_three', file_paths['/third/location/conf_three'], is_third_file=True)
 
 # Generate JSON output
 json_output = json.dumps(data, indent=4)
