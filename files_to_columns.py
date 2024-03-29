@@ -15,11 +15,11 @@ key_to_description = {
     'StringOne': 'Description Four',
     'StringTwo': 'Description Five',
     'StringThree': 'Description Six',
-    # Add mappings for unique keys from conf_three if necessary
+    ...
 }
 
 # Initialize a dictionary to hold the data
-data = {'ID': [], 'source': [], 'key': [], 'value': [], 'description': []}
+data = []
 
 # Initialize ID counter
 id_counter = 0
@@ -52,11 +52,14 @@ def parse_file_two(path, identifier):
 # Helper function to add data to the structure
 def add_to_data(key, value, source):
     global id_counter
-    data['ID'].append(str(id_counter))
-    data['source'].append(source)
-    data['key'].append(key)
-    data['value'].append(value)
-    data['description'].append(key_to_description.get(key, ''))
+    description = key_to_description.get(key, '')
+    data.append({
+        'ID': str(id_counter),
+        'Source': source,
+        'Key': key,
+        'Value': value,
+        'Description': description
+    })
     id_counter += 1
 
 # Store the contents of the first conf file to identify unique lines in the third conf file
