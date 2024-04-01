@@ -261,7 +261,6 @@ def process_logs(events_oom, events_txsentry, events_reference_data_processor, e
 # Define headers for the event types
 headers_oom = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
 headers_txsentry = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
-headers_reference_data_processor = [{"key": "time_date", "header": "Time/Date"}]
 headers_reference_data_processor = [{"key": "time_date", "header": "Time/Date"}, {"key": "message", "header": "Message"}]
 headers_expensive_rules = [{"key": "time_date", "header": "Time/Date"}, {"key": "rules", "header": "Rules Details"}]
 headers_too_many_open = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
