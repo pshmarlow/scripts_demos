@@ -62,12 +62,10 @@ too_many_open_patterns = [
 ]
 
 # Cache Overflow pattern
+
 cache_overflow_patterns = [
     re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*(?P<cache>\S+) is experiencing heavy COLLISIONS exceeding configured threshold.*'
-    ),
-    re.compile(
-        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>\S+)\].*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\].*(?P<cache>\S+) is experiencing heavy disk reads exceeding configured threshold.*'
+        r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+).*\[(?P<service>[^\.\]]+)[^\] \[.*com.q1labs.frameworks.cache.ChainAppendCache: \[WARN\] \[NOT.*- -\] \[-/- -\](?P<cache>\S+) (?P<message>.*)'
     )
 ]
 
@@ -166,13 +164,16 @@ def process_cache_overflow_event(match, events_cache_overflow, seen_events):
     datetime_obj = datetime.datetime.strptime(date_str_with_year, '%b %d %H:%M:%S %Y')
     service_name = match.group('service')
     cache_name = match.group('cache')
-    event_key = (datetime_obj, service_name, cache_name, 'CacheOverflow')
+    additional_message = match.group('message').strip()  # Capture the additional message part
+    message = cache_name + ' ' + additional_message
+    event_key = (datetime_obj, service_name, cache_name, message, 'CacheOverflow')
     if event_key not in seen_events:
         seen_events.add(event_key)
         events_cache_overflow.append({
             'DateTime': datetime_obj,
             'service': service_name,
-            'cache': cache_name,
+            'cache': cache_name, 
+            'message': message 
         })
 
 def process_dropped_receive_event(match, events_dropped_receive, seen_events):
