@@ -74,15 +74,12 @@ dropped_receive_pattern = re.compile(
     r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+.*Dropped receive packets on interface (?P<interface>\S+) has an average of (?P<over_5_intervals>\d+(\.\d+)?) over the past.*intervals, and has exceeded the configured threshold of (?P<threshold>\d+(\.\d+)?).*'
 )
 
-
-
 # Connect Localhost pattern
 connect_localhost_pattern = re.compile(
     r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+.*\]Unable to connect to server localhost:(?P<port>\d+)'
 )
 
-
-
+#HERE
 
 def process_oom_event(match, events_oom, seen_events):
     date_str = match.group('date')
@@ -221,6 +218,7 @@ def process_connect_localhost_event(match, events_connect_localhost, seen_events
             'port': port
         })
         
+#HERE
 
 # Keywords and command for zgrep
 oom_keywords = "OutOfMemoryMonitor"
@@ -232,9 +230,13 @@ cache_overflow_keywords = " is experiencing heavy "
 dropped_receive_keywords = "Dropped receive packets on interface "
 connect_localhost_keywords = "Unable to connect to server localhost:"
 log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
+# HERE
+# BELOW
 cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}|{dropped_receive_keywords}|{connect_localhost_keywords}" {log_path} 2>/dev/null'
 
-def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, events_dropped_receive, seen_events):
+# BELOW
+def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, events_dropped_receive, events_connect_localhost, seen_events):
+ 
     issues_runs = os.popen(cmd).read().strip().split('\n')
     last_event = None
     for run in issues_runs:
@@ -294,6 +296,8 @@ def process_logs(events_oom, events_txsentry, events_reference_data_processor, e
             process_connect_localhost_event(match, events_connect_localhost, seen_events)
             last_event = None
 
+        #HERE
+
 # Define headers for the event types
 headers_oom = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
 headers_txsentry = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}]
@@ -303,6 +307,7 @@ headers_too_many_open = [{"key": "time_date", "header": "Time/Date"}, {"key": "s
 headers_cache_overflow = [{"key": "time_date", "header": "Time/Date"}, {"key": "service", "header": "Service Name"}, {"key": "cache", "header": "Cache Name"}]
 headers_dropped_receive = [{"key": "time_date", "header": "Time/Date"}, {"key": "interface", "header": "Interface"}, {"key": "over_5_intervals", "header": "Over 5 Intervals"}, {"key": "threshold", "header": "Threshold"}]
 headers_connect_localhost = [{"key": "time_date", "header": "Time/Date"}, {"key": "message", "header": "Message"}, {"key": "port", "header": "Port"}]
+# HERE
 
 def main():
     events_oom = []
@@ -313,9 +318,12 @@ def main():
     events_cache_overflow = []
     events_dropped_receive = []
     events_connect_localhost = []
+    # HERE
     seen_events = set()
+    # BELOW
     process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, events_dropped_receive, events_connect_localhost, seen_events)
-     
+
+    # BELOW
     for event_list, headers in [(events_oom, headers_oom), (events_txsentry, headers_txsentry), (events_reference_data_processor, headers_reference_data_processor), (events_expensive_rules, headers_expensive_rules), (events_too_many_open, headers_too_many_open), (events_cache_overflow, headers_cache_overflow), (events_dropped_receive, headers_dropped_receive), (events_connect_localhost, headers_connect_localhost)]:
          event_list.sort(key=lambda event: event['DateTime'])
          for idx, event in enumerate(event_list):
@@ -334,6 +342,7 @@ def main():
         "CacheOverflow": {"data": events_cache_overflow, "headers": headers_cache_overflow},
         "DroppedReceive": {"data": events_dropped_receive, "headers": headers_dropped_receive},
         "ConnectLocalhost": {"data": events_connect_localhost, "headers": headers_connect_localhost}
+        # HERE
     }
     
     print(json.dumps(final_output))
