@@ -232,7 +232,7 @@ cache_overflow_keywords = " is experiencing heavy "
 dropped_receive_keywords = "Dropped receive packets on interface "
 connect_localhost_keywords = "Unable to connect to server localhost:"
 log_path = "var/log/qradar.old/qradar.error.{25..1}.gz var/log/qradar.error"
-cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}|{dropped_receive_keywords}" {log_path} 2>/dev/null'
+cmd = f'zgrep -hE "{oom_keywords}|{txsentry_keywords}|{reference_data_processor_keywords}|{expensive_rules_keywords}|{too_many_open_files_keywords}|{cache_overflow_keywords}|{dropped_receive_keywords}|{connect_localhost_keywords}" {log_path} 2>/dev/null'
 
 def process_logs(events_oom, events_txsentry, events_reference_data_processor, events_expensive_rules, events_too_many_open, events_cache_overflow, events_dropped_receive, seen_events):
     issues_runs = os.popen(cmd).read().strip().split('\n')
