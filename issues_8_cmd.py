@@ -223,29 +223,26 @@ def process_connect_localhost_event(match, events_connect_localhost, seen_events
 #HERE
 
 #
-def extract_dates_from_compressed_logs(base_path, log_file_pattern, latest_file):
-    date_pattern = re.compile(r'(?P<date>\w{3}\s+\d+\s+\d+:\d+:\d+)')
-    start_date, end_date = None, None
+def extract_dates_from_logs():
+    # Define log paths
+    logs = sorted(glob('/var/log/qradar.old/qradar.error.*.gz'))
+    logs.append('/var/log/qradar.error')  # Add the current, uncompressed log
 
-    # Generate the list of log file paths, considering the specified range
-    log_files = sorted([f"{base_path}/qradar.error.{i}.gz" for i in range(25, 0, -1)] + [latest_file])
-    
-    if log_files:
-        # Open the first log file (oldest)
-        with gzip.open(log_files[0], 'rt') as f:
-            first_line = f.readline()
-            match = date_pattern.search(first_line)
-            if match:
-                start_date = datetime.datetime.strptime(f"{match.group('date')} {datetime.datetime.now().year}", '%b %d %H:%M:%S %Y').isoformat()
-        
-        # Open the last log file (newest)
-        with gzip.open(log_files[-1], 'rt') as f:
-            lines = f.readlines()
-            match = date_pattern.search(lines[-1])
-            if match:
-                end_date = datetime.datetime.strptime(f"{match.group('date')} {datetime.datetime.now().year}", '%b %d %H:%M:%S %Y').isoformat()
+    # Extract the first date from the oldest log file
+    with gzip.open(logs[0], 'rt') if logs[0].endswith('.gz') else open(logs[0], 'r') as f:
+        first_line = f.readline()
+        start_date = re.search(r'\w{3}\s+\d+\s+\d+:\d+:\d+', first_line).group(0)
+        start_date = datetime.datetime.strptime(start_date, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
 
-    return start_date, end_date
+    # Extract the last date from the latest log file
+    with gzip.open(logs[-1], 'rt') if logs[-1].endswith('.gz') else open(logs[-1], 'r') as f:
+        f.seek(0, os.SEEK_END)
+        f.seek(f.tell() - 1024, os.SEEK_SET)  # Go back 1024 bytes from the end of the file
+        last_lines = f.readlines()
+        last_date = re.search(r'\w{3}\s+\d+\s+\d+:\d+:\d+', last_lines[-1]).group(0)
+        last_date = datetime.datetime.strptime(last_date, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
+
+    return start_date, last_date
     
 
 # Keywords and command for zgrep
@@ -362,11 +359,7 @@ def main():
                  del event['thread_key']
 
     #
-    # File paths for the oldest and latest log files
-    base_path = "/var/log/qradar.old"
-    latest_file = "/var/log/qradar.error"
-    # Extract start and end dates from the log files
-    start_date, end_date = extract_dates_from_compressed_logs(base_path, "qradar.error.{25..1}.gz", latest_file)
+    start_date, end_date = extract_dates_from_logs()
 
     
     final_output = {
