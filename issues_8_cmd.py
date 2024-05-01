@@ -3,8 +3,6 @@ import json
 import os
 import datetime
 from glob import glob
-#
-import gzip
 
 # OOM Regular expression patterns
 oom_patterns = [
@@ -223,27 +221,22 @@ def process_connect_localhost_event(match, events_connect_localhost, seen_events
 #HERE
 
 #
-def extract_dates_from_logs():
-    # Define log paths
-    logs = sorted(glob('/var/log/qradar.old/qradar.error.*.gz'))
-    logs.append('/var/log/qradar.error')  # Add the current, uncompressed log
+start_date_cmd = "head -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
+last_date_cmd = "zcat /var/log/qradar.old/$(ls -tr1 /var/log/qradar.old | grep -P 'qradar.error.\d+.gz$' | head -1) | head -200 | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
+#
+def fetch_date(cmd):
+    try:
+        output = os.popen(cmd).read().strip()
+        # If no output is found from zcat, use tail from qradar.error
+        if not output:
+            cmd = "tail -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | tail -1"
+            output = os.popen(cmd).read().strip()
+        return datetime.datetime.strptime(output, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
+    except Exception as e:
+        print(f"Error fetching date: {e}")
+        return None
 
-    # Extract the first date from the oldest log file
-    with gzip.open(logs[0], 'rt') if logs[0].endswith('.gz') else open(logs[0], 'r') as f:
-        first_line = f.readline()
-        start_date = re.search(r'\w{3}\s+\d+\s+\d+:\d+:\d+', first_line).group(0)
-        start_date = datetime.datetime.strptime(start_date, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
 
-    # Extract the last date from the latest log file
-    with gzip.open(logs[-1], 'rt') if logs[-1].endswith('.gz') else open(logs[-1], 'r') as f:
-        f.seek(0, os.SEEK_END)
-        f.seek(f.tell() - 1024, os.SEEK_SET)  # Go back 1024 bytes from the end of the file
-        last_lines = f.readlines()
-        last_date = re.search(r'\w{3}\s+\d+\s+\d+:\d+:\d+', last_lines[-1]).group(0)
-        last_date = datetime.datetime.strptime(last_date, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
-
-    return start_date, last_date
-    
 
 # Keywords and command for zgrep
 oom_keywords = "OutOfMemoryMonitor"
@@ -359,9 +352,9 @@ def main():
                  del event['thread_key']
 
     #
-    start_date, end_date = extract_dates_from_logs()
-
-    
+    start_date = fetch_date(start_date_cmd)
+    last_date = fetch_date(last_date_cmd)
+  
     final_output = {
         "metadata": {"start": start_date, "end": end_date},
         "OOM": {"data": events_oom, "headers": headers_oom},
