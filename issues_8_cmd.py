@@ -221,15 +221,15 @@ def process_connect_localhost_event(match, events_connect_localhost, seen_events
 #HERE
 
 #
-start_date_cmd = "head -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
-last_date_cmd = "zcat /var/log/qradar.old/$(ls -tr1 /var/log/qradar.old | grep -P 'qradar.error.\d+.gz$' | head -1) | head -200 | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
+end_date_cmd = "tail -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | tail -1"
+start_date_cmd = "zcat /var/log/qradar.old/$(ls -tr1 /var/log/qradar.old | grep -P 'qradar.error.\d+.gz$' | head -1) | head -200 | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
 #
 def fetch_date(cmd):
     try:
         output = os.popen(cmd).read().strip()
         # If no output is found from zcat, use tail from qradar.error
         if not output:
-            cmd = "tail -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | tail -1"
+            cmd = "head -200 /var/log/qradar.error | grep -oP '^\w{3}\s+\d+\s+(\d+:){2}\d+' | head -1"
             output = os.popen(cmd).read().strip()
         return datetime.datetime.strptime(output, '%b %d %H:%M:%S').replace(year=datetime.datetime.now().year).isoformat()
     except Exception as e:
@@ -353,7 +353,7 @@ def main():
 
     #
     start_date = fetch_date(start_date_cmd)
-    last_date = fetch_date(last_date_cmd)
+    end_date = fetch_date(last_date_cmd)
   
     final_output = {
         "metadata": {"start": start_date, "end": end_date},
