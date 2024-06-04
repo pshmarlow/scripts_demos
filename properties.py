@@ -130,13 +130,15 @@ def process_word_file(propertyviewpath):
                 devicetype_properties[devicetypedescription].add(propertyname)
 
 
-    tenant_counts = {}
+    tenant_counts = []
     if len(tenant_property_counts) == 1 and '0' in tenant_property_counts:
-        tenant_counts['N/A'] = len(tenant_property_counts['0'])
+        tenant_counts.append({'group': 'N/A', 'value': len(tenant_property_counts['0'])})
     else:
         for tenant_id, properties in tenant_property_counts.items():
-            tenant_counts[tenant_id] = len(properties)
+            tenant_counts.append({'group': tenant_id, 'value': len(properties)})
 
+    
+    
     devicetypedescription_counts = {devicetype: len(properties) for devicetype, properties in devicetype_properties.items()}
 
     return count_events, count_flows, count_events_expressions, count_flows_expressions, count_forceparse_t, count_forceparse_f, count_forceparse_t_events, count_forceparse_t_flows, tenant_counts, devicetypedescription_counts
@@ -183,9 +185,9 @@ print(f"Count of unique expressions for enabled flows: {count_flows_expressions}
 print(f"Count of unique enabled forceparsed: {count_forceparse_t}")
 print(f"Count of unique enabled non-forceparsed: {count_forceparse_f}")
 print("Tenant Counts:")
-for tenant_id, count in tenant_counts.items():
-    print(f"Tenant ID: {tenant_id}, Count of unique properties: {count}")
-
+for tenant in tenant_counts:
+    print(f"Tenant ID: {tenant['group']}, Count of unique properties: {tenant['value']}")
+    
 '''
 print(f"Count of unique enabled forceparsed events: {count_forceparse_t_events}")
 print(f"Count of unique enabled forceparsed flows: {count_forceparse_t_flows}")
